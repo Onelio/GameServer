@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type Room struct {
@@ -20,12 +21,14 @@ func printChannelData(client *Client) {
 	client.SendPacket(" - Para entrar a una sala has de enviar enter <nombre_sin_espacios>")
 	client.SendPacket("")
 	client.SendPacket("[Lista de canales existentes]")
+
 	//Start printing
 	count := 0
 	for _, room := range rooms {
 		count++
 		users := len(room.users)
-		client.SendPacket("[" + strconv.Itoa(count) + "]" + room.name + " Users:" + strconv.Itoa(users) + " Mode:" + room.mode)
+		client.SendPacket(fmt.Sprintf("[%s] %s Users: %s Mode: %s",
+			strconv.Itoa(count), room.name, strconv.Itoa(users), room.mode))
 	}
 	client.SendPacket("")
 }
@@ -44,7 +47,7 @@ func enterRoom(client *Client, name string) {
 	}
 	room.users = append(room.users, client)
 
-	printInsideRoom(client)
+	room.SendPacket(fmt.Sprintf("El usuario %s ha entrado a la sala", client.name))
 }
 
 func createRoom(client *Client, name string) {
@@ -72,14 +75,12 @@ func handleChannelPacket(client *Client, packet string) {
 			return
 		}
 		createRoom(client, s[1])
-		break
 	case "enter":
 		if len(s) < 2 || s[1] == "" { //Blank not valid
 			client.SendPacket("No especificado")
 			return
 		}
 		enterRoom(client, s[1])
-		break
 	default:
 		printChannelData(client)
 	}

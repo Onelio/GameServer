@@ -27,13 +27,13 @@ var server *Server
 func (client *Client) inputChannel(reader *bufio.Reader) {
 	for {
 		line, err := reader.ReadString('\n')
-		if err == nil {
-			line := strings.TrimSuffix(line, "\n")
-			if line != "" {
-				server.Handler(client, line)
-			}
-		} else {
+		if err != nil {
 			break
+		}
+
+		line = strings.TrimSuffix(line, "\n")
+		if line != "" {
+			server.Handler(client, line)
 		}
 	}
 	RemoveClient(client)
@@ -41,17 +41,17 @@ func (client *Client) inputChannel(reader *bufio.Reader) {
 
 func (client *Client) outputChannel(writer *bufio.Writer) {
 	for data := range client.ochan {
-		time.Sleep(1) //Prevent bug
+		time.Sleep(1) //TODO FIX READING PACKETS DIRECTLY
 		writer.WriteString(data)
 		writer.Flush()
 	}
 }
 
-func (client *Client) SendPacket(string string) {
-	if !strings.Contains(string, "\n") {
-		string += "\n"
+func (client *Client) SendPacket(str string) {
+	if !strings.Contains(str, "\n") {
+		str += "\n"
 	}
-	client.ochan <- string
+	client.ochan <- str
 }
 
 func (room *Room) SendPacket(string string) {
@@ -65,27 +65,21 @@ func (room *Room) SendPacket(string string) {
 }
 
 func NewClient(conn net.Conn) (*Client) {
-	client := &Client{ conn: conn, ochan: make(chan string)}
+	client := &Client{
+		conn: conn,
+		ochan: make(chan string),
+	}
+
 	go client.inputChannel(bufio.NewReader(client.conn))
 	go client.outputChannel(bufio.NewWriter(client.conn))
+
 	return client
 }
 
 func RemoveClient(client *Client) {
 	client.conn.Close()
 	//Remove from room
-	if client.room != "" {
-		room := rooms[client.room]
-		for i, eclient := range room.users {
-			if eclient == client {
-				room.users = append(room.users[:i], room.users[i+1:]...)
-				room.SendPacket("El usuario " + client.name + " ha abandonado la sala")
-			}
-		}
-		if len(room.users) < 1 {
-			delete(rooms, room.name)
-		}
-	}
+	client.LeaveRoom()
 
 	//Remove from client list
 	for i, eclient := range server.Clients {
