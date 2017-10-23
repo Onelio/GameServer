@@ -13,6 +13,7 @@ type Client struct {
 	name	string
 	room	string
 	gamer	bool
+	vcount	int
 }
 
 type Server struct {
@@ -41,7 +42,7 @@ func (client *Client) inputChannel(reader *bufio.Reader) {
 
 func (client *Client) outputChannel(writer *bufio.Writer) {
 	for data := range client.ochan {
-		time.Sleep(1) //TODO FIX READING PACKETS DIRECTLY
+		time.Sleep(15) //TODO FIX READING PACKETS DIRECTLY
 		writer.WriteString(data)
 		writer.Flush()
 	}
@@ -55,10 +56,6 @@ func (client *Client) SendPacket(str string) {
 }
 
 func (room *Room) SendPacket(string string) {
-	if !strings.Contains(string, "\n") {
-		string += "\n"
-	}
-
 	for _, client := range room.users {
 		client.SendPacket(string)
 	}

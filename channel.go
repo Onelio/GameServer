@@ -11,6 +11,8 @@ type Room struct {
 	mode	string
 	users	[]*Client
 	playing	bool
+	turn	int
+	cells	[]int
 }
 
 var rooms map[string]*Room
@@ -48,6 +50,7 @@ func enterRoom(client *Client, name string) {
 	room.users = append(room.users, client)
 
 	room.SendPacket(fmt.Sprintf("El usuario %s ha entrado a la sala", client.name))
+	room.CheckGameState(client)
 }
 
 func createRoom(client *Client, name string) {
