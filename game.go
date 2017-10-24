@@ -87,6 +87,12 @@ func (room *Room) PlayTurn(str string) {
 		printWinner(room, winner-1) //Return to count from 0
 		return
 	}
+	if winner == -1 { //No winners
+		room.SendPacket("[Estado] Partida terminada en empate!")
+		room.SendPacket("[Sala] Empezando otra vez...")
+		room.GameStart()
+		return
+	}
 	room.turn++
 	if room.turn > 1 {
 		room.turn = 0
