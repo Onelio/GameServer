@@ -17,6 +17,32 @@ type Room struct {
 
 var rooms map[string]*Room
 
+func (room *Room) QuitClient(client *Client) (int) {
+	for i, eclient := range room.users {
+		if eclient == client {
+			room.users = append(room.users[:i], room.users[i+1:]...)
+			return i
+		}
+	}
+	return -1
+}
+
+func (client *Client) SetReady() {
+	room := rooms[client.room]
+	client.ready = true
+
+	if room.users[0].ready && room.users[1].ready {
+		room.users[0].ready = false
+		room.users[1].ready = false
+		room.SendPacket("[Sala] Todos listos!")
+		room.users[0].vcount = 0
+		room.users[1].vcount = 0
+		room.GameStart()
+	} else {
+		room.SendPacket("[Sala] Contrincante " + client.name + " esta listo!")
+	}
+}
+
 func printChannelData(client *Client) {
 	client.SendPacket("[Panel de Seleccion de Sala]")
 	client.SendPacket(" - Para crear una sala has de enviar create <nombre_sin_espacios>")
@@ -42,11 +68,7 @@ func enterRoom(client *Client, name string) {
 		return
 	}
 	client.room = name
-	if len(room.users) < 3 {
-		client.gamer = true
-	} else {
-		client.gamer = false
-	}
+	client.ready = false
 	room.users = append(room.users, client)
 
 	room.SendPacket(fmt.Sprintf("El usuario %s ha entrado a la sala", client.name))

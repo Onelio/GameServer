@@ -7,12 +7,15 @@ import (
 )
 
 func printInsideRoom(client *Client) {
-	mode := "Jugador"
-	if !client.gamer {
-		mode = "Espectador"
-	}
-	client.SendPacket(fmt.Sprintf("*Sala %s Mode: %s", client.room, mode))
+	client.SendPacket(fmt.Sprintf("*Estas en sala %s", client.room))
 
+}
+
+func printWaitToPlay(room *Room) {
+	room.SendPacket("")
+	room.SendPacket("[Sala] Contrincantes localizados, esperando a que esten listos...")
+	room.users[0].SendPacket("[Mensaje] Di ready cuando estes listo")
+	room.users[1].SendPacket("[Mensaje] Di ready cuando estes listo")
 }
 
 func printGame(room *Room) {
@@ -23,13 +26,12 @@ func printGame(room *Room) {
 }
 
 func printWinner(room *Room, i int) {
+	room.playing = false
 	client := room.users[i]
 	client.vcount++
 	room.SendPacket("")
 	room.SendPacket("[Estado] Victoria de " + client.name + "!!")
-	room.SendPacket("[Recuento de Victorias]")
-	room.SendPacket(" - " + room.users[0].name + ": " + strconv.Itoa(room.users[0].vcount))
-	room.SendPacket(" - " + room.users[1].name + ": " + strconv.Itoa(room.users[1].vcount))
+	room.SendPacket("[Recuento de Victorias] " + room.users[0].name + ": " + strconv.Itoa(room.users[0].vcount) + " || " + room.users[1].name + ": " + strconv.Itoa(room.users[1].vcount))
 
 	if i != 0 {
 		room.SendPacket("[Estado] Inviertiendo posiciones!")
@@ -37,7 +39,34 @@ func printWinner(room *Room, i int) {
 		room.users[0] = room.users[1]
 		room.users[1] = c0
 	}
-	room.GameStart()
+
+	CheckForNextGame(room)
+}
+
+func CheckForNextGame(room *Room) {
+	var winner, looser *Client
+	if room.users[0].vcount == 3 {
+		winner = room.users[0]
+		looser = room.users[1]
+	} else if room.users[1].vcount == 3 {
+		winner = room.users[1]
+		looser = room.users[0]
+	} else {
+		room.GameStart()
+		return
+	}
+
+	room.SendPacket("[Estado] Enhorabuena " + winner.name + " has ganado 3 veces a " + looser.name)
+	room.SendPacket("[Estado] Concluyendo la partida general!")
+	looser.vcount = 0
+	winner.vcount = 0
+
+	if len(room.users) > 2 {
+		room.SendPacket("[Sala] Retirando a " + looser.name + " del juego y añadiendo a " + room.users[2].name)
+		room.QuitClient(looser)
+		room.users = append(room.users, looser)
+	}
+	printWaitToPlay(room)
 }
 
 func (room *Room) PlayTurn(str string) {
@@ -74,6 +103,7 @@ func (room *Room) GiveTurn() {
 
 func (room *Room) GameStart() {
 	room.playing = true
+	room.turn = 0
 	room.cells = make([]int, 9)
 
 	room.SendPacket("")
@@ -89,26 +119,32 @@ func (room *Room) GameStart() {
 
 func (room *Room) CheckGameState(client *Client) {
 	if !room.playing {
-		if len(room.users) < 2 {
-			client.SendPacket("[Estado] Esperando jugadores para empezar la partida...")
-		} else {
-			room.users[0].vcount = 0
-			room.users[1].vcount = 0
-			room.GameStart()
+		client.SendPacket("[Estado] Esperando jugadores para empezar la partida...")
+		if len(room.users) > 1 {
+			printWaitToPlay(room)
 		}
+	} else {
+		client.SendPacket("[Sala] Partida en curso...")
 	}
 }
 
 func (client *Client) LeaveRoom() {
 	if client.room != "" {
 		room := rooms[client.room]
-		for i, eclient := range room.users {
-			if eclient == client {
-				room.users = append(room.users[:i], room.users[i+1:]...)
-				client.room = ""
-				room.SendPacket("El usuario " + client.name + " ha abandonado la sala")
+
+		result := room.QuitClient(client)
+		if result > -1 {
+			client.room = ""
+			room.SendPacket("El usuario " + client.name + " ha abandonado la sala")
+
+			//If user is player and is actually playing
+			if room.playing && result < 2 {
+				room.playing = false
+				room.SendPacket("[Estado] Juego Cancelado!")
+				room.CheckGameState(room.users[0])
 			}
 		}
+
 		if len(room.users) < 1 {
 			delete(rooms, room.name)
 		}
@@ -128,6 +164,8 @@ func handleRoomPacket(client *Client, packet string) {
 			room := rooms[client.room]
 			room.SendPacket(client.name + ": " + packet)
 		}
+	case "ready":
+		client.SetReady()
 	case "play":
 		room := rooms[client.room]
 		if room.users[room.turn] == client {

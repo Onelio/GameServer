@@ -12,7 +12,7 @@ type Client struct {
 	ochan	chan string
 	name	string
 	room	string
-	gamer	bool
+	ready	bool
 	vcount	int
 }
 
