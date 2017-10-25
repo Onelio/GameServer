@@ -4,7 +4,6 @@ import (
 	"net"
 	"strings"
 	"bufio"
-	"time"
 )
 
 type Client struct {
@@ -42,7 +41,6 @@ func (client *Client) inputChannel(reader *bufio.Reader) {
 
 func (client *Client) outputChannel(writer *bufio.Writer) {
 	for data := range client.ochan {
-		time.Sleep(15) //TODO FIX READING PACKETS DIRECTLY
 		writer.WriteString(data)
 		writer.Flush()
 	}

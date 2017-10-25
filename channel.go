@@ -39,7 +39,7 @@ func (client *Client) SetReady() {
 		room.users[1].vcount = 0
 		room.GameStart()
 	} else {
-		room.SendPacket("[Sala] Contrincante " + client.name + " esta listo!")
+		room.SendPacket(fmt.Sprintf("[Sala] Contrincante %s esta listo!", client.name))
 	}
 }
 

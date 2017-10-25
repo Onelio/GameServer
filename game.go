@@ -30,8 +30,9 @@ func printWinner(room *Room, i int) {
 	client := room.users[i]
 	client.vcount++
 	room.SendPacket("")
-	room.SendPacket("[Estado] Victoria de " + client.name + "!!")
-	room.SendPacket("[Recuento de Victorias] " + room.users[0].name + ": " + strconv.Itoa(room.users[0].vcount) + " || " + room.users[1].name + ": " + strconv.Itoa(room.users[1].vcount))
+	room.SendPacket(fmt.Sprintf("[Estado] Victoria de %s!!", client.name))
+	room.SendPacket(fmt.Sprintf("[Recuento de Victorias] %s: %s || %s: %s",
+		room.users[0].name, strconv.Itoa(room.users[0].vcount), room.users[1].name, strconv.Itoa(room.users[1].vcount)))
 
 	if i != 0 {
 		room.SendPacket("[Estado] Inviertiendo posiciones!")
@@ -56,13 +57,15 @@ func CheckForNextGame(room *Room) {
 		return
 	}
 
-	room.SendPacket("[Estado] Enhorabuena " + winner.name + " has ganado 3 veces a " + looser.name)
+	room.SendPacket(fmt.Sprintf("[Estado] Enhorabuena %s has ganado 3 veces a %s",
+		winner.name, looser.name))
 	room.SendPacket("[Estado] Concluyendo la partida general!")
 	looser.vcount = 0
 	winner.vcount = 0
 
 	if len(room.users) > 2 {
-		room.SendPacket("[Sala] Retirando a " + looser.name + " del juego y añadiendo a " + room.users[2].name)
+		room.SendPacket(fmt.Sprintf("[Sala] Retirando a %s del juego y añadiendo a %s",
+			looser.name, room.users[2].name))
 		room.QuitClient(looser)
 		room.users = append(room.users, looser)
 	}
@@ -102,7 +105,7 @@ func (room *Room) PlayTurn(str string) {
 
 func (room *Room) GiveTurn() {
 	client := room.users[room.turn]
-	room.SendPacket("[Estado] Turno de " + client.name)
+	room.SendPacket(fmt.Sprintf("[Estado] Turno de %s", client.name))
 	client.SendPacket(" Como deseas seguir? Escribe play <numCasilla> para continuar")
 	client.SendPacket("  Recuerda que se cuenta desde 1-9 de izquierda a derecha")
 }
@@ -141,7 +144,7 @@ func (client *Client) LeaveRoom() {
 		result := room.QuitClient(client)
 		if result > -1 {
 			client.room = ""
-			room.SendPacket("El usuario " + client.name + " ha abandonado la sala")
+			room.SendPacket(fmt.Sprintf("El usuario %s ha abandonado la sala", client.name))
 
 			//If user is player and is actually playing
 			if room.playing && result < 2 {
