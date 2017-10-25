@@ -58,5 +58,11 @@ func findWinner(room *Room) (int) {
 	if room.cells[2] == room.cells[4] && room.cells[4] == room.cells[6] && room.cells[2] != 0 {
 		return room.cells[2]
 	}
-	return 0
+
+	for _, value := range room.cells {
+		if value < 1 {
+			return 0
+		}
+	}
+	return -1
 }
